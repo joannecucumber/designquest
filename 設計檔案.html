@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Boy 風格設計模組生成器</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: linear-gradient(135deg, #8b956d 0%, #9bbc0f 50%, #8b956d 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+
+        /* 響應式設計 - 小屏幕適配 */
+        @media (max-width: 390px) {
+            body {
+                padding: 3px;
+                align-items: flex-start;
+                overflow-y: auto;
+            }
+            
+            .gameboy-body {
+                transform: scale(0.85);
+                transform-origin: top center;
+                margin-top: 8px;
+            }
+            
+            .database-container {
+                margin: 8px 3px;
+                padding: 10px;
+            }
+            
+            .module-item-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-height: 680px) {
+            body {
+                align-items: flex-start;
+                padding-top: 3px;
+            }
+            
+            .gameboy-body {
+                transform: scale(0.87);
+                transform-origin: top center;
+            }
+            
+            .database-container {
+                margin: 8px auto;
+            }
+            
+            .module-list {
+                max-height: 38vh;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .gameboy-body {
+                transform: scale(0.78);
+            }
+            
+            .module-list {
+                max-height: 32vh;
+            }
+        }
+
+        @media (max-height: 550px) {
+            .gameboy-body {
+                transform: scale(0.72);
+            }
+        }
+
+        .gameboy-body {
+            background: linear-gradient(145deg, #9bbc0f 0%, #8b956d 100%);
+            border: 8px solid #4a5d23;
+            border-radius: 25px 25px 35px 35px;
+            padding: 25px;
+            width: 345px;
+            height: 628px;
+            box-shadow: 
+                inset 4px 4px 8px #a3c958,
+                inset -4px -4px 8px #6b7c2a,
+                8px 8px 20px rgba(75, 93, 35, 0.4);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gameboy-body::before {
+            content: "GAME BOY";
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 17px;
+            color: #4a5d23;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .gameboy-body::after {
+            content: "Nintendo";
+            position: absolute;
+            top: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 17px;
+            color: #6b7c2a;
+            font-style: italic;
+        }
+
+        .power-led {
+            position: absolute;
+            top: 18px;
+            right: 30px;
+            width: 8px;
+            height: 8px;
+            background: #ff0000;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ff0000;
+            animation: powerBlink 2s infinite;
+        }
+
+        @keyframes powerBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .screen-area {
+            background: #4a5d23;
+            border: 6px solid #2a3d1a;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 45px 0 10px 0;
+            height: 415px;
+            box-shadow: 
+                inset 6px 6px 12px #2a3d1a,
+                inset -3px -3px 6px #5a6d33;
+            flex-shrink: 0;
+        }
+
+        .screen {
+            background: #9bbc0f;
+            border: 2px solid #6b7c2a;
+            border-radius: 4px;
+            padding: 15px;
+            height: 100%;
+            position: relative;
+            box-shadow: inset 2px 2px 4px #6b7c2a;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* 自定義滾動條樣式 */
+        .screen::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .screen::-webkit-scrollbar-track {
+            background: #6b7c2a;
+            border-radius: 4px;
+        }
+
+        .screen::-webkit-scrollbar-thumb {
+            background: #4a5d23;
+            border-radius: 4px;
+            border: 1px solid #2a3d1a;
+        }
+
+        .screen::-webkit-scrollbar-thumb:hover {
+            background: #2a3d1a;
+        }
+
+        /* Firefox 滾動條樣式 */
+        .screen {
+            scrollbar-width: thin;
+            scrollbar-color: #4a5d23 #6b7c2a;
+            scroll-behavior: smooth;
+        }
+
+        .screen::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(107, 124, 42, 0.1) 2px,
+                    rgba(107, 124, 42, 0.1) 4px
+                );
+            pointer-events: none;
+            border-radius: 2px;
+        }
+
+        .game-header {
+            color: #4a5d23;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 0px #a3c958;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            background: #9bbc0f;
+            z-index: 10;
+            padding: 5px 0;
+        }
+
+        .game-header.hide-in-result {
+            display: none;
+        }
+
+        .module-display {
+            background: #4a5d23;
+            color: #9bbc0f;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            min-height: 240px;
+            font-size: 18px;
+            line-height: 1.3;
+            display: none;
+            border: 1px solid #2a3d1a;
+        }
+
+        .module-title {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #a3c958;
+        }
+
+        .module-category {
+            background: #9bbc0f;
+            color: #4a5d23;
+            padding: 3px 8px;
+            border-radius: 2px;
+            font-size: 18px;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .content-section {
+            margin-bottom: 12px;
+        }
+
+        .content-section h3 {
+            font-size: 19px;
+            margin-bottom: 4px;
+            color: #a3c958;
+        }
+
+        .content-section p {
+            font-size: 18px;
+            line-height: 1.2;
+        }
+
+        .start-screen {
+            text-align: center;
+            color: #4a5d23;
+            font-size: 20px;
+            padding: 20px 15px;
+        }
+
+        .game-logo {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #2a3d1a;
+        }
+
+        .start-prompt {
+            background: #4a5d23;
+            color: #9bbc0f;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-size: 18px;
+            border: 1px solid #2a3d1a;
+        }
+
+        .press-start {
+            animation: blink 1.5s infinite;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .loading-screen {
+            display: none;
+            text-align: center;
+            color: #4a5d23;
+            padding: 15px;
+            position: relative;
+            height: 280px;
+        }
+
+        .loading-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #2a3d1a;
+        }
+
+        .space-scene {
+            position: relative;
+            width: 100%;
+            height: 140px;
+            background: linear-gradient(180deg, #2a3d1a 0%, #4a5d23 100%);
+            border: 2px solid #2a3d1a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #9bbc0f;
+            border-radius: 50%;
+            animation: twinkle 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .ufo {
+            position: absolute;
+            width: 30px;
+            height: 15px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation: floating 2s ease-in-out infinite;
+        }
+
+        .ufo-body {
+            width: 30px;
+            height: 9px;
+            background: #8b956d;
+            border-radius: 50%;
+            border: 1px solid #9bbc0f;
+            position: relative;
+            box-shadow: 0 0 10px rgba(155, 188, 15, 0.4);
+        }
+
+        .ufo-dome {
+            position: absolute;
+            top: -4px;
+            left: 10px;
+            width: 9px;
+            height: 5px;
+            background: rgba(155, 188, 15, 0.5);
+            border-radius: 50%;
+            border: 1px solid #9bbc0f;
+        }
+
+        .ufo-lights {
+            position: absolute;
+            bottom: -1px;
+            left: 3px;
+            width: 24px;
+            height: 2px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ufo-light {
+            width: 2px;
+            height: 2px;
+            background: #9bbc0f;
+            border-radius: 50%;
+            animation: blink 0.8s infinite alternate;
+        }
+
+        .ufo-light:nth-child(2) { animation-delay: 0.3s; }
+        .ufo-light:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes floating {
+            0%, 100% {
+                transform: translate(-50%, -50%) translateY(0px);
+            }
+            50% {
+                transform: translate(-50%, -50%) translateY(-8px);
+            }
+        }
+
+        .future-text {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: #9bbc0f;
+            text-shadow: 0 0 8px rgba(155, 188, 15, 0.6);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            0% { 
+                opacity: 0.7; 
+                text-shadow: 0 0 4px rgba(155, 188, 15, 0.6);
+            }
+            100% { 
+                opacity: 1; 
+                text-shadow: 0 0 12px rgba(155, 188, 15, 1);
+            }
+        }
+
+        .generating-text {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #4a5d23;
+        }
+
+        .controls-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+            padding: 0 20px;
+        }
+
+        .dpad-area {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .dpad {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .dpad-btn {
+            position: absolute;
+            background: linear-gradient(145deg, #6b7c2a, #4a5d23);
+            border: 2px solid #2a3d1a;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 2px 2px 4px rgba(42, 61, 26, 0.3);
+        }
+
+        .dpad-btn:active {
+            background: linear-gradient(145deg, #4a5d23, #2a3d1a);
+            transform: translateY(1px);
+            box-shadow: 1px 1px 2px rgba(42, 61, 26, 0.3);
+        }
+
+        .dpad-up, .dpad-down {
+            width: 22px;
+            height: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dpad-up {
+            top: 0;
+            border-radius: 6px 6px 3px 3px;
+        }
+
+        .dpad-down {
+            bottom: 0;
+            border-radius: 3px 3px 6px 6px;
+        }
+
+        .dpad-left, .dpad-right {
+            width: 28px;
+            height: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .dpad-left {
+            left: 0;
+            border-radius: 6px 3px 3px 6px;
+        }
+
+        .dpad-right {
+            right: 0;
+            border-radius: 3px 6px 6px 3px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .btn-a, .btn-b {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #6b7c2a, #4a5d23);
+            border: 3px solid #2a3d1a;
+            color: #9bbc0f;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 3px 3px 6px rgba(42, 61, 26, 0.3);
+            position: relative;
+        }
+
+        .btn-a::after, .btn-b::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #4a5d23;
+        }
+
+        .btn-a:active, .btn-b:active {
+            background: linear-gradient(145deg, #4a5d23, #2a3d1a);
+            transform: translateY(1px);
+            box-shadow: 2px 2px 4px rgba(42, 61, 26, 0.3);
+        }
+
+        .speaker-grille {
+            position: absolute;
+            bottom: 20px;
+            right: 25px;
+            width: 40px;
+            height: 30px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 2px;
+        }
+
+        .speaker-dot {
+            width: 3px;
+            height: 3px;
+            background: #4a5d23;
+            border-radius: 50%;
+        }
+
+        .controls-info {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 16px;
+            color: #4a5d23;
+        }
+
+        .nintendo-logo {
+            position: absolute;
+            bottom: 60px;
+            left: 25px;
+            font-size: 10px;
+            color: #6b7c2a;
+            transform: rotate(-90deg);
+            transform-origin: left bottom;
+        }
+    </style>
+</head>
+<body>
+    <div class="gameboy-body">
+        <div class="power-led"></div>
+        
+        <div class="screen-area">
+            <div class="screen">
+                <div class="game-header" id="gameHeader">
+                    ▓▒░ Design Quest ░▒▓
+                </div>
+
+    <!-- 題庫管理界面 -->
+    <div id="databaseOverlay" class="database-overlay">
+        <div class="database-container">
+            <div id="moduleList" class="module-list">
+                <!-- 模組列表會在這裡動態生成 -->
+            </div>
+        </div>
+    </div>
+
+                <!-- 開始畫面 -->
+                <div id="startScreen" class="start-screen">
+                    <div class="start-prompt">
+                        PRESS START TO BEGIN<br>
+                        YOUR DESIGN JOURNEY
+                    </div>
+                    <div class="press-start">▶ PRESS A BUTTON ◀</div>
+                </div>
+
+                <!-- 載入動畫畫面 -->
+                <div id="loadingScreen" class="loading-screen">
+                    <div class="loading-title">TIME TRAVELING...</div>
+                    
+                    <div class="space-scene">
+                        <div class="stars" id="starsContainer"></div>
+                        
+                        <div class="ufo" id="ufoElement">
+                            <div class="ufo-body">
+                                <div class="ufo-dome"></div>
+                                <div class="ufo-lights">
+                                    <div class="ufo-light"></div>
+                                    <div class="ufo-light"></div>
+                                    <div class="ufo-light"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="future-text">SCANNING...</div>
+                    </div>
+                    
+                    <div class="generating-text">
+                        <div id="loadingText">INITIALIZING...</div>
+                    </div>
+                </div>
+
+                <!-- 結果顯示畫面 -->
+                <div id="moduleDisplay" class="module-display">
+                    <!-- 模組內容將在這裡顯示 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-area">
+            <div class="dpad-area">
+                <div class="dpad">
+                    <div class="dpad-btn dpad-up" onclick="navigateModule('prev')"></div>
+                    <div class="dpad-btn dpad-down" onclick="navigateModule('next')"></div>
+                    <div class="dpad-btn dpad-left" onclick="switchCategory('prev')"></div>
+                    <div class="dpad-btn dpad-right" onclick="switchCategory('next')"></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-b" data-label="BACK" onclick="goBack()">B</button>
+                <button class="btn-a" data-label="START" onclick="startGeneration()">A</button>
+            </div>
+        </div>
+
+        <div class="nintendo-logo">Nintendo</div>
+    </div>
+
+    <script>
+        const modules = [
+            {
+                category: "MOD1: AI REVOLUTION",
+                title: "1. AI AS CREATIVE PARTNER",
+                chineseTitle: "AI 作為創意夥伴",
+                content: "探討如何將 AI 工具整合至設計流程中，以提升效率並擴展創意邊界。研究重點在於評估不同 AI 工具在創意發想、設計生成到優化各階段的應用。",
+                trend: "生成式 AI 工具正迅速成為業界標準，從根本上改變了設計的工作流程與效率。",
+                growth: "促使設計師的角色從「創作者」演變為「策展人與精煉者」。"
+            },
+            {
+                category: "MOD1: AI REVOLUTION", 
+                title: "2. AI-DRIVEN PERSONALIZATION",
+                chineseTitle: "AI 驅動的個人化體驗",
+                content: "研究如何利用 AI 分析用戶數據，以提供預測性的個人化體驗。探索如何設計一個能動態適應不同用戶數據的介面。",
+                trend: "Netflix、Spotify 等龍頭企業已證明，預測性個人化是提升用戶參與度的關鍵驅動力。",
+                growth: "訓練設計師像數據架構師一樣思考，學習設計介面與演算法之間的共生回饋循環。"
+            },
+            {
+                category: "MOD1: AI REVOLUTION",
+                title: "3. AI ETHICS CHALLENGE",
+                chineseTitle: "AI 設計的倫理挑戰",
+                content: "探討在導入 AI 功能時的倫理考量。研究重點為如何識別並減輕訓練數據中的潛在偏見。",
+                trend: "隨著 AI 影響力擴大，演算法偏見、數據隱私等議題已成為公眾關注焦點。",
+                growth: "擴展設計師的職責，使其成為用戶的倡導者，學習如何透過介面設計來提供透明度。"
+            },
+            {
+                category: "MOD2: NEXT-GEN DESIGN",
+                title: "4. DESIGN FOR GEN-Z",
+                chineseTitle: "為 Z 世代設計",
+                content: "解碼 Z 世代的核心數位行為。分析其對即時性、視覺化溝通與真實性的核心需求。",
+                trend: "Z 世代的數位原生行為正迅速成為所有用戶的期望基準，主導著市場主流。",
+                growth: "挑戰設計師超越傳統可用性，掌握身份賦能的設計方法。"
+            },
+            {
+                category: "MOD2: NEXT-GEN DESIGN",
+                title: "5. ENGAGEMENT DESIGN",
+                chineseTitle: "參與感設計",
+                content: "在注意力稀缺的時代，探討如何打造引人入勝的體驗。聚焦於遊戲化原則和短內容策略的應用。",
+                trend: "UX 的抖音化是現實：所有 App 都在與娛樂平台爭奪用戶的注意力和多巴胺。",
+                growth: "訓練設計師成為參與感大師，熟練運用遊戲化策略。"
+            },
+            {
+                category: "MOD2: NEXT-GEN DESIGN", 
+                title: "6. VALUE-DRIVEN DESIGN",
+                chineseTitle: "價值觀驅動的設計",
+                content: "研究如何將抽象的社會價值觀轉化為具體的產品功能。針對隱私、永續性與包容性等價值觀進行設計。",
+                trend: "消費者越來越傾向於根據品牌的社會價值觀來做出去留決策。",
+                growth: "培養設計師將抽象價值觀轉化為具體產品功能的能力。"
+            },
+            {
+                category: "MOD3: RESPONSIBLE DESIGN",
+                title: "7. ACCESSIBILITY (A11Y)",
+                chineseTitle: "無障礙設計",
+                content: "將無障礙設計從檢查清單提升為設計方法論。透過螢幕閱讀器操作、色彩對比度審核等實作。",
+                trend: "無障礙設計正從法律合規要求，轉變為衡量產品品質的核心指標。",
+                growth: "為邊緣用戶設計的方案，最終往往能改善所有用戶的體驗。"
+            },
+            {
+                category: "MOD3: RESPONSIBLE DESIGN",
+                title: "8. DIGITAL SUSTAINABILITY",
+                chineseTitle: "數位永續性設計",
+                content: "探討數位產品的環境影響。分析如何透過優化數據負載、採用模組化設計等策略減少能源消耗。",
+                trend: "隨著全球對氣候變遷的關注，數位產品的碳足跡正成為新的品牌考量點。",
+                growth: "培養設計師的系統思維，理解效能與環境影響之間的關聯。"
+            },
+            {
+                category: "MOD3: RESPONSIBLE DESIGN",
+                title: "9. PRIVACY BY DESIGN",
+                chineseTitle: "設計隱私權",
+                content: "深入探討如何在設計中嵌入隱私保護。聚焦於設計隱私權的原則，如數據最小化、預設即隱私等。",
+                trend: "在數據洩露頻傳和法規日趨嚴格的背景下，用戶對數據隱私的期望達到前所未有的高度。",
+                growth: "訓練設計師解決個人化與數據最小化之間的內在張力。"
+            },
+            {
+                category: "MOD4: INTERACTION PSYCHOLOGY",
+                title: "10. COGNITIVE PSYCHOLOGY",
+                chineseTitle: "認知心理學應用",
+                content: "應用認知心理學原則來打造更直覺的介面。探討格式塔原則的應用，評估是否違反希克定律。",
+                trend: "在資訊過載的時代，能有效降低用戶認知負荷的產品，擁有巨大的競爭優勢。",
+                growth: "將設計師從單純遵循 UI 模式，提升到能運用心理學原則做出設計決策。"
+            },
+            {
+                category: "MOD4: INTERACTION PSYCHOLOGY",
+                title: "11. BEHAVIORAL ECONOMICS",
+                chineseTitle: "行為經濟學的說服力設計",
+                content: "探討如何合乎倫理地運用行為經濟學原則來引導用戶行為。應用輕推原則設計說服力堆疊方案。",
+                trend: "頂尖企業普遍運用行為經濟學原則來輕推用戶，以優化轉換率和用戶行為。",
+                growth: "為設計師提供一套強大的說服力工具，同時培養對暗黑模式的警覺。"
+            },
+            {
+                category: "MOD4: INTERACTION PSYCHOLOGY",
+                title: "12. DIGITAL STORYTELLING",
+                chineseTitle: "數位敘事",
+                content: "研究如何利用敘事與用戶建立情感連結。探索滾動敘事、將用戶數據轉化為個人化故事等手法。",
+                trend: "Spotify Wrapped 等案例證明，敘事是與用戶建立情感連結的強大武器。",
+                growth: "提升設計師的角色層次，使其成為體驗的敘事者。"
+            },
+            {
+                category: "MOD5: EXPANDED CANVAS",
+                title: "13. AR/VR APPLICATIONS",
+                chineseTitle: "AR/VR 的應用",
+                content: "探索 AR/VR 在設計領域的應用價值，不僅是作為終端產品，更是作為內部設計工具。",
+                trend: "AR/VR 已在改善內部設計審查、協作流程和降低原型成本方面展現商業價值。",
+                growth: "幫助設計師為 3D 互動的未來做好準備，思考如何利用新技術優化工作流程。"
+            },
+            {
+                category: "MOD5: EXPANDED CANVAS",
+                title: "14. CROSS-CULTURAL DESIGN",
+                chineseTitle: "跨文化設計",
+                content: "在產品全球化的趨勢下，探討如何為不同文化背景的用戶進行設計。運用霍夫斯泰德的文化維度等框架。",
+                trend: "產品全球化已是常態，無法適應在地文化差異的設計，將難以在國際市場上取得成功。",
+                growth: "培養設計師的文化智慧和策略思維，克服自身文化偏見。"
+            },
+            {
+                category: "MOD5: EXPANDED CANVAS",
+                title: "15. IoT UX DESIGN",
+                chineseTitle: "物聯網 (IoT) 的 UX",
+                content: "應對物聯網帶來的獨特 UX 挑戰。繪製常見 IoT 任務的用戶旅程圖，分析潛在失敗點。",
+                trend: "互聯設備的爆炸式增長帶來極度碎片化的體驗，為統一控制平台創造巨大市場機會。",
+                growth: "挑戰設計師超越單一螢幕的限制，學習繪製跨多個接觸點的用戶旅程圖。"
+            }
+        ];
+
+        let currentModuleIndex = 0;
+        let currentScreen = 'start';
+        let editingModuleIndex = -1;
+
+        const loadingTexts = [
+            "INITIALIZING...",
+            "SCANNING MODULES...",
+            "ANALYZING TRENDS...",
+            "LOADING CONTENT...",
+            "PREPARING DISPLAY...",
+            "ALMOST READY..."
+        ];
+
+        // 題庫管理功能
+        function openDatabase() {
+            document.getElementById('databaseOverlay').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            renderModuleList();
+        }
+
+        function closeDatabase() {
+            document.getElementById('databaseOverlay').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            cancelEdit(); // 取消任何正在進行的編輯
+        }
+
+        function renderModuleList() {
+            const moduleList = document.getElementById('moduleList');
+            
+            moduleList.innerHTML = modules.map((module, index) => `
+                <div class="module-item" id="module-${index}">
+                    <div class="module-item-header">
+                        <div class="module-number">模組 ${index + 1}</div>
+                        <button class="edit-btn" onclick="startEdit(${index})">
+                            ✏️ 編輯
+                        </button>
+                    </div>
+                    
+                    <!-- 顯示模式 -->
+                    <div class="display-mode" id="display-${index}">
+                        <div class="module-title-display">${module.chineseTitle}</div>
+                        
+                        <div class="module-section">
+                            <div class="section-label">▶ 題目內文：</div>
+                            <div class="section-content">${module.content}</div>
+                        </div>
+                        
+                        <div class="module-section">
+                            <div class="section-label">▶ 世界趨勢：</div>
+                            <div class="section-content">${module.trend}</div>
+                        </div>
+                        
+                        <div class="module-section">
+                            <div class="section-label">▶ 設計師成長：</div>
+                            <div class="section-content">${module.growth}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 編輯模式 -->
+                    <div class="edit-mode" id="edit-${index}">
+                        <input type="text" class="edit-input" id="title-${index}" 
+                               value="${module.chineseTitle}" placeholder="中文標題">
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div class="section-label">▶ 題目內文：</div>
+                            <textarea class="edit-input edit-textarea" id="content-${index}" 
+                                      placeholder="題目內文">${module.content}</textarea>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div class="section-label">▶ 世界趨勢：</div>
+                            <textarea class="edit-input edit-textarea" id="trend-${index}" 
+                                      placeholder="世界趨勢">${module.trend}</textarea>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div class="section-label">▶ 設計師成長：</div>
+                            <textarea class="edit-input edit-textarea" id="growth-${index}" 
+                                      placeholder="設計師成長">${module.growth}</textarea>
+                        </div>
+                        
+                        <div>
+                            <button class="save-btn" onclick="saveEdit(${index})">
+                                💾 保存
+                            </button>
+                            <button class="cancel-btn" onclick="cancelEdit()">
+                                ❌ 取消
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function startEdit(index) {
+            // 如果有其他正在編輯的項目，先取消
+            if (editingModuleIndex !== -1) {
+                cancelEdit();
+            }
+            
+            editingModuleIndex = index;
+            document.getElementById(`display-${index}`).style.display = 'none';
+            document.getElementById(`edit-${index}`).classList.add('active');
+            
+            // 滾動到編輯項目
+            document.getElementById(`module-${index}`).scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+        }
+
+        function saveEdit(index) {
+            const title = document.getElementById(`title-${index}`).value.trim();
+            const content = document.getElementById(`content-${index}`).value.trim();
+            const trend = document.getElementById(`trend-${index}`).value.trim();
+            const growth = document.getElementById(`growth-${index}`).value.trim();
+            
+            if (!title || !content || !trend || !growth) {
+                alert('請填寫所有欄位！');
+                return;
+            }
+            
+            // 更新模組資料
+            modules[index].chineseTitle = title;
+            modules[index].content = content;
+            modules[index].trend = trend;
+            modules[index].growth = growth;
+            
+            // 如果當前顯示的是這個模組，更新顯示
+            if (currentModuleIndex === index && currentScreen === 'result') {
+                displayModule();
+            }
+            
+            // 退出編輯模式
+            cancelEdit();
+            
+            // 重新渲染列表
+            renderModuleList();
+            
+            // 顯示成功提示
+            showMessage('✅ 模組已成功更新！');
+        }
+
+        function cancelEdit() {
+            if (editingModuleIndex !== -1) {
+                document.getElementById(`display-${editingModuleIndex}`).style.display = 'block';
+                document.getElementById(`edit-${editingModuleIndex}`).classList.remove('active');
+                editingModuleIndex = -1;
+            }
+        }
+
+        function showMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(145deg, #4a5d23, #2a3d1a);
+                border: 3px solid #1a2d10;
+                color: #9bbc0f;
+                padding: 20px 30px;
+                border-radius: 8px;
+                font-size: 14px;
+                z-index: 3000;
+                box-shadow: 8px 8px 20px rgba(26, 45, 16, 0.6);
+            `;
+            msgDiv.textContent = message;
+            document.body.appendChild(msgDiv);
+            
+            setTimeout(() => {
+                document.body.removeChild(msgDiv);
+            }, 2000);
+        }
+
+        // 點擊遮罩關閉
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'databaseOverlay') {
+                closeDatabase();
+            }
+        });
+
+        function startGeneration() {
+            if (currentScreen !== 'start' && currentScreen !== 'result') return;
+            
+            const gameHeader = document.getElementById('gameHeader');
+            
+            // 確保標題在載入時顯示
+            gameHeader.classList.remove('hide-in-result');
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('moduleDisplay').style.display = 'none';
+            document.getElementById('loadingScreen').style.display = 'block';
+            currentScreen = 'loading';
+            
+            startLoadingAnimation();
+        }
+
+        function startLoadingAnimation() {
+            let textIndex = 0;
+            
+            const loadingText = document.getElementById('loadingText');
+            const starsContainer = document.getElementById('starsContainer');
+            
+            function createStars() {
+                starsContainer.innerHTML = '';
+                for (let i = 0; i < 18; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.style.left = Math.random() * 100 + '%';
+                    star.style.top = Math.random() * 100 + '%';
+                    star.style.animationDelay = Math.random() * 2 + 's';
+                    starsContainer.appendChild(star);
+                }
+            }
+            
+            createStars();
+            
+            const textInterval = setInterval(() => {
+                loadingText.textContent = loadingTexts[textIndex];
+                textIndex = (textIndex + 1) % loadingTexts.length;
+            }, 500);
+            
+            setTimeout(() => {
+                clearInterval(textInterval);
+                showResult();
+            }, 3500);
+        }
+
+        function showResult() {
+            currentModuleIndex = Math.floor(Math.random() * modules.length);
+            document.getElementById('loadingScreen').style.display = 'none';
+            displayModule();
+            currentScreen = 'result';
+        }
+
+        function displayModule() {
+            const module = modules[currentModuleIndex];
+            const displayDiv = document.getElementById('moduleDisplay');
+            const gameHeader = document.getElementById('gameHeader');
+            
+            // 隱藏標題
+            gameHeader.classList.add('hide-in-result');
+            
+            displayDiv.innerHTML = `
+                <div class="module-title">${module.chineseTitle}</div>
+                
+                <div class="content-section">
+                    <h3>▶ 題目內文：</h3>
+                    <p>${module.content}</p>
+                </div>
+                
+                <div class="content-section">
+                    <h3>▶ 世界趨勢：</h3>
+                    <p>${module.trend}</p>
+                </div>
+                
+                <div class="content-section">
+                    <h3>▶ 設計師成長：</h3>
+                    <p>${module.growth}</p>
+                </div>
+            `;
+            
+            displayDiv.style.display = 'block';
+        }
+
+        function navigateModule(direction) {
+            if (currentScreen !== 'result') return;
+            
+            if (direction === 'next') {
+                currentModuleIndex = (currentModuleIndex + 1) % modules.length;
+            } else {
+                currentModuleIndex = currentModuleIndex === 0 ? modules.length - 1 : currentModuleIndex - 1;
+            }
+            displayModule();
+        }
+
+        function switchCategory(direction) {
+            if (currentScreen !== 'result') return;
+            
+            const currentCategory = modules[currentModuleIndex].category;
+            let targetCategory;
+            
+            if (direction === 'next') {
+                if (currentCategory.includes('MOD1')) targetCategory = 'MOD2';
+                else if (currentCategory.includes('MOD2')) targetCategory = 'MOD3';
+                else if (currentCategory.includes('MOD3')) targetCategory = 'MOD4';
+                else if (currentCategory.includes('MOD4')) targetCategory = 'MOD5';
+                else targetCategory = 'MOD1';
+            } else {
+                if (currentCategory.includes('MOD1')) targetCategory = 'MOD5';
+                else if (currentCategory.includes('MOD2')) targetCategory = 'MOD1';
+                else if (currentCategory.includes('MOD3')) targetCategory = 'MOD2';
+                else if (currentCategory.includes('MOD4')) targetCategory = 'MOD3';
+                else targetCategory = 'MOD4';
+            }
+            
+            const targetModule = modules.find(m => m.category.includes(targetCategory));
+            currentModuleIndex = modules.indexOf(targetModule);
+            displayModule();
+        }
+
+        function goBack() {
+            const gameHeader = document.getElementById('gameHeader');
+            
+            // 顯示標題
+            gameHeader.classList.remove('hide-in-result');
+            
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('moduleDisplay').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'block';
+            currentScreen = 'start';
+        }
+
+        // 鍵盤控制
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+E 打開題庫管理
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                if (document.getElementById('databaseOverlay').style.display !== 'block') {
+                    openDatabase();
+                }
+                return;
+            }
+            
+            // ESC鍵處理
+            if (e.key === 'Escape') {
+                // 如果題庫管理界面是打開的，關閉它
+                if (document.getElementById('databaseOverlay').style.display === 'block') {
+                    closeDatabase();
+                }
+                // 否則執行Game Boy的返回功能
+                else {
+                    goBack();
+                }
+                return;
+            }
+            
+            // Game Boy控制（只在題庫管理界面關閉時才生效）
+            if (document.getElementById('databaseOverlay').style.display !== 'block') {
+                switch(e.key) {
+                    case 'Enter':
+                    case ' ':
+                        startGeneration();
+                        break;
+                    case 'ArrowUp':
+                        navigateModule('prev');
+                        break;
+                    case 'ArrowDown':
+                        navigateModule('next');
+                        break;
+                    case 'ArrowLeft':
+                        switchCategory('prev');
+                        break;
+                    case 'ArrowRight':
+                        switchCategory('next');
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
