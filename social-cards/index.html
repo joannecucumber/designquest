@@ -260,9 +260,7 @@ body {
   font-size: 40px;
   font-weight: 900;
   line-height: 1.4;
-  margin-bottom: 12px;
-  padding-bottom: 16px;
-  position: relative;
+  margin-bottom: 28px;
 }
 .slide.content-slide h3 {
   font-size: 34px;
@@ -380,6 +378,31 @@ body {
 .slide.content-slide .slide-footer .handle {
   font-weight: 700;
 }
+
+/* === HERO IMAGE SLIDE === */
+.slide.content-slide.has-hero {
+  padding: 0;
+  border-left: none;
+}
+.slide.content-slide.has-hero .hero-image {
+  width: 100%;
+  object-fit: cover;
+  display: block;
+}
+.slide.content-slide.has-hero .hero-body {
+  display: flex;
+  flex-direction: column;
+  padding: 36px 72px 48px 66px;
+  border-left: 6px solid;
+}
+.slide.content-slide.has-hero .hero-body h1 { font-size: 52px; margin-bottom: 24px; }
+.slide.content-slide.has-hero .hero-body h2 { font-size: 34px; margin-bottom: 20px; }
+.slide.content-slide.has-hero .hero-body p { font-size: 26px; margin-bottom: 20px; }
+.slide.content-slide.has-hero .hero-body .list-item { font-size: 26px; }
+.slide.content-slide.has-hero .hero-body .numbered-card { padding: 20px 24px; margin-bottom: 20px; }
+.slide.content-slide.has-hero .hero-body .callout { font-size: 24px; }
+.slide.content-slide.has-hero .hero-body .quote-box p { font-size: 26px; }
+.slide.content-slide.has-hero .hero-body .slide-footer { font-size: 20px; padding-top: 12px; }
 
 /* === CTA SLIDE === */
 .slide.cta-slide {
@@ -1402,6 +1425,14 @@ function parseBlock(text) {
       continue;
     }
 
+    // Image: ![alt](url)
+    var imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      elements.push({ type: 'image', alt: imgMatch[1], url: imgMatch[2] });
+      i++;
+      continue;
+    }
+
     var tagMatch = line.match(/^\[(.+)\]$/);
     if (tagMatch) {
       tag = tagMatch[1];
@@ -1533,10 +1564,12 @@ function renderSlides(parsed) {
       el.innerHTML = renderCta(slide, config, theme);
     } else {
       contentPageNum++;
+      var hasHero = slide.elements.length > 0 && slide.elements[0].type === 'image';
       el.classList.add('content-slide');
+      if (hasHero) el.classList.add('has-hero');
       el.style.background = colors.bg;
       el.style.color = colors.text;
-      el.style.borderLeftColor = theme.accent;
+      if (!hasHero) el.style.borderLeftColor = theme.accent;
       el.innerHTML = renderContent(slide, config, contentPageNum, totalPages, theme, colors, textAccent);
     }
 
@@ -1601,7 +1634,7 @@ function renderCover(slide, config, theme, totalPages) {
   var sourceText = config.source ? 'Source | ' + config.source : '';
 
   var swipeHint = totalPages > 1
-    ? '<div style="position:absolute;bottom:80px;right:72px;display:flex;align-items:center;gap:8px;opacity:0.5;font-size:20px">' +
+    ? '<div style="position:absolute;bottom:140px;right:72px;display:flex;align-items:center;gap:8px;opacity:0.5;font-size:20px">' +
         '<span>滑動看更多</span>' +
         '<span style="font-size:28px">→</span>' +
       '</div>'
@@ -1619,6 +1652,15 @@ function renderCover(slide, config, theme, totalPages) {
 }
 
 function renderContent(slide, config, pageNum, totalPages, theme, colors, textAccent) {
+  // Check if first element is a hero image
+  var heroUrl = null;
+  var heroAlt = '';
+  if (slide.elements.length > 0 && slide.elements[0].type === 'image') {
+    heroUrl = slide.elements[0].url;
+    heroAlt = slide.elements[0].alt || '';
+    slide.elements = slide.elements.slice(1);
+  }
+
   var tagHtml = slide.tag
     ? '<div class="tag" style="background:' + theme.accent + '">' + slide.tag + '</div>'
     : '<div></div>';
@@ -1656,11 +1698,10 @@ function renderContent(slide, config, pageNum, totalPages, theme, colors, textAc
         bodyHtml += '<div class="big-number" style="color:' + textAccent + '">' + el.text + '</div>';
         break;
       case 'h1':
-        bodyHtml += '<div style="width:40px;height:4px;background:' + theme.accent + ';border-radius:2px;margin-bottom:20px"></div>';
         bodyHtml += '<h1 style="color:' + colors.heading + '">' + renderHighlight(el.text, highlightColor) + '</h1>';
         break;
       case 'h2':
-        bodyHtml += '<h2 style="color:' + colors.heading + ';border-bottom:3px solid ' + theme.accent + '">' + renderHighlight(el.text, highlightColor) + '</h2>';
+        bodyHtml += '<h2 style="color:' + colors.heading + '">' + renderHighlight(el.text, highlightColor) + '</h2>';
         break;
       case 'h3':
         bodyHtml += '<h3 style="color:' + colors.heading + '">' + renderHighlight(el.text, highlightColor) + '</h3>';
@@ -1719,17 +1760,27 @@ function renderContent(slide, config, pageNum, totalPages, theme, colors, textAc
 
   var sourceText = config.source ? 'Source | ' + config.source : '';
 
-  return '<div class="slide-head">' +
+  var innerHtml = '<div class="slide-head">' +
       tagHtml +
       '<span class="page-num" style="color:' + colors.muted + '">' + pageStr + '</span>' +
     '</div>' +
     '<div class="slide-body">' +
       bodyHtml + quoteHtml +
     '</div>' +
-    '<div class="slide-footer" style="color:' + colors.muted + '">' +
+    '<div class="slide-footer" style="color:' + colors.muted + ';border-top:1px solid ' + colors.muted + '30;padding-top:20px">' +
       '<span>' + sourceText + '</span>' +
-      '<span class="handle" style="color:' + textAccent + '">' + config.handle + '</span>' +
+      '<span class="handle" style="color:' + textAccent + ';background:' + textAccent + '15;padding:6px 16px;border-radius:20px">' + config.handle + '</span>' +
     '</div>';
+
+  if (heroUrl) {
+    var dim = getDimensions();
+    var heroH = Math.round(dim.h / 3);
+    var bodyH = dim.h - heroH;
+    return '<img class="hero-image" src="' + heroUrl + '" alt="' + heroAlt + '" style="height:' + heroH + 'px" crossorigin="anonymous">' +
+      '<div class="hero-body" style="border-left-color:' + theme.accent + ';height:' + bodyH + 'px">' + innerHtml + '</div>';
+  }
+
+  return innerHtml;
 }
 
 // === CTA RENDERER ===
@@ -1970,6 +2021,7 @@ function buildGuide() {
     ['|> 文字', '左邊橘線 callout', '#fff'],
     ['① **粗體**', '編號項目（數字為主題色）', '#E8764A'],
     ['&lt;br&gt;', '標題內強制換行', '#555'],
+    ['![](url)', '首圖（頂部 1/3 滿版圖片）', '#61AFEF'],
     ['{87%}', '超大數字（數據型頁面）', '#E8764A'],
     ['***', '頁內水平分隔線', '#555'],
     ['cta / [cta]', '結尾 CTA 頁（自動產生或自訂）', '#61AFEF']
