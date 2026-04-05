@@ -379,6 +379,52 @@ body {
   font-weight: 700;
 }
 
+/* === COMPACT MODE (auto-applied when content is dense) === */
+.slide.content-slide.compact { padding-top: 48px; padding-bottom: 48px; }
+.slide.content-slide.compact h1 { font-size: 48px; margin-bottom: 24px; }
+.slide.content-slide.compact .numbered-card { padding: 16px 24px; margin-bottom: 12px; }
+.slide.content-slide.compact .numbered-card .num-badge { font-size: 32px; margin-bottom: 4px; }
+.slide.content-slide.compact .numbered-card .num-title { font-size: 26px; margin-bottom: 4px; }
+.slide.content-slide.compact .numbered-card .num-desc { font-size: 22px; line-height: 1.5; }
+.slide.content-slide.compact p { font-size: 24px; margin-bottom: 16px; }
+.slide.content-slide.compact .list-item { font-size: 24px; margin-bottom: 8px; }
+.slide.content-slide.compact .slide-head { margin-bottom: 24px; }
+
+/* === STATEMENT SLIDE (title-only, centered) === */
+.slide.content-slide.statement-slide {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 80px 72px;
+}
+.slide.content-slide.statement-slide .slide-head {
+  position: absolute;
+  top: 64px;
+  left: 66px;
+  right: 72px;
+}
+.slide.content-slide.statement-slide .slide-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.slide.content-slide.statement-slide h1 {
+  font-size: 76px;
+  line-height: 1.35;
+  margin-bottom: 0;
+}
+.slide.content-slide.statement-slide .quote-box {
+  margin-top: 48px;
+}
+.slide.content-slide.statement-slide .slide-footer {
+  position: absolute;
+  bottom: 48px;
+  left: 66px;
+  right: 72px;
+}
+
 /* === HERO IMAGE SLIDE === */
 .slide.content-slide.has-hero {
   padding: 0;
@@ -403,6 +449,18 @@ body {
 .slide.content-slide.has-hero .hero-body .callout { font-size: 24px; }
 .slide.content-slide.has-hero .hero-body .quote-box p { font-size: 26px; }
 .slide.content-slide.has-hero .hero-body .slide-footer { font-size: 20px; padding-top: 12px; }
+.slide.content-slide.has-hero.statement-slide .hero-body .slide-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.slide.content-slide.has-hero.statement-slide .hero-body h1 {
+  font-size: 60px;
+  margin-bottom: 0;
+}
 
 /* === CTA SLIDE === */
 .slide.cta-slide {
@@ -1565,8 +1623,13 @@ function renderSlides(parsed) {
     } else {
       contentPageNum++;
       var hasHero = slide.elements.length > 0 && slide.elements[0].type === 'image';
+      // Statement slide: only h1, or h1 + quote, nothing else
+      var nonEmpty = slide.elements.filter(function(e) { return e.type !== 'image'; });
+      var isStatement = nonEmpty.length >= 1 && nonEmpty[0].type === 'h1' &&
+        (nonEmpty.length === 1 || (nonEmpty.length === 2 && nonEmpty[1].type === 'quote'));
       el.classList.add('content-slide');
       if (hasHero) el.classList.add('has-hero');
+      if (isStatement) el.classList.add('statement-slide');
       el.style.background = colors.bg;
       el.style.color = colors.text;
       if (!hasHero) el.style.borderLeftColor = theme.accent;
@@ -1574,6 +1637,22 @@ function renderSlides(parsed) {
     }
 
     container.appendChild(el);
+
+    // Auto-compact: count heavy elements and shrink if too many
+    if (slide.type === 'content') {
+      var numCount = slide.elements.filter(function(e) {
+        return e.type === 'p' && /^[①②③④⑤⑥⑦⑧⑨⑩]/.test(e.text);
+      }).length;
+      var listCount = slide.elements.filter(function(e) { return e.type === 'list'; }).length;
+      var totalItems = numCount;
+      slide.elements.forEach(function(e) {
+        if (e.type === 'list') totalItems += e.items.length;
+      });
+
+      if (numCount >= 4 || totalItems >= 7) {
+        el.classList.add('compact');
+      }
+    }
 
     var wrapper = document.createElement('div');
     wrapper.className = 'slide-wrapper';
