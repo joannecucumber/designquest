@@ -39,8 +39,8 @@ if (inputArg === "-") {
 const outputDir = resolve(args[1] || "social-cards/output");
 mkdirSync(outputDir, { recursive: true });
 
-// Path to index.html
-const htmlPath = resolve(import.meta.dir, "index.html");
+// Path to app.html
+const htmlPath = resolve(import.meta.dir, "app.html");
 const htmlUrl = `file://${htmlPath}`;
 
 console.log("Launching browser...");
